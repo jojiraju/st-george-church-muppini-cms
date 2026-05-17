@@ -198,3 +198,119 @@ input:-webkit-autofill:active {
   -webkit-text-fill-color: #ffffff !important;
   transition: background-color 5000s ease-in-out 0s;
 }
+
+/* ==========================================================================
+   MOBILE & TABLET RESPONSIVE MEDIA QUERIES
+   ========================================================================== */
+
+/* Tablet & Mobile Layout Adaptations (under 1024px) */
+@media (max-width: 1024px) {
+  .cms-layout {
+    flex-direction: column !important;
+  }
+  
+  .cms-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: calc(100vh - 32px) !important;
+    margin: 16px !important;
+    box-sizing: border-box !important;
+    z-index: 10000 !important;
+    transform: translateX(-320px);
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8) !important;
+  }
+  
+  .cms-sidebar.open {
+    transform: translateX(0) !important;
+  }
+  
+  .cms-sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  .cms-sidebar-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Dashboard Stat Cards & Grid Adjustments */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1200px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 580px) {
+  .stat-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+/* Dashboard Column Split Adjustments */
+.dashboard-two-col {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 24px;
+}
+
+@media (max-width: 992px) {
+  .dashboard-two-col {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+}
+
+/* General Layout Elements */
+.cms-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .cms-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  
+  .cms-header-actions {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+}
+
+/* Login Card Mobile Adjustments */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px !important;
+  }
+}
+
+/* Make tables wrap/scroll as a fallback just in case */
+.cms-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

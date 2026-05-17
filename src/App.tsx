@@ -19,7 +19,8 @@ import {
   Printer,
   TrendingUp,
   AlertCircle,
-  LogOut
+  LogOut,
+  Menu
 } from 'lucide-react';
 
 // Sample mock databases as fallback if Express API is offline
@@ -150,7 +151,28 @@ export default function App() {
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin@1976');
   const [loginError, setLoginError] = useState('');
+  
+  // Responsive design breakpoints
+  const [isTablet, setIsTablet] = useState(false); // < 1024px for sidebar drawer
+  const [isMobile, setIsMobile] = useState(false); // < 768px for card views & layout collapse
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsTablet(window.innerWidth < 1024);
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'dashboard' | 'families' | 'offerings' | 'contacts' | 'users'>('dashboard');
+
+  // Close mobile sidebar on tab change
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [activeTab]);
   const [families, setFamilies] = useState<any[]>(MOCK_FAMILIES);
   const [offerings, setOfferings] = useState<any[]>(MOCK_OFFERINGS);
   const [contacts, setContacts] = useState<any[]>(MOCK_CONTACTS);
@@ -533,10 +555,10 @@ export default function App() {
         background: 'radial-gradient(circle, #1a0b0f 0%, #080405 100%)',
         padding: '24px'
       }}>
-        <div className="glass-panel" style={{
+        <div className="glass-panel login-card" style={{
           maxWidth: '450px',
           width: '100%',
-          padding: '40px',
+          padding: isMobile ? '24px' : '40px',
           textAlign: 'center',
           boxSizing: 'border-box'
         }}>
@@ -639,10 +661,16 @@ export default function App() {
 
   // Active Tab Rendering
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: '#080405', color: '#ffffff' }}>
+    <div className="cms-layout" style={{ minHeight: '100vh', display: 'flex', background: '#080405', color: '#ffffff' }}>
       
+      {/* MOBILE SIDEBAR OVERLAY BACKDROP */}
+      <div 
+        className={`cms-sidebar-overlay ${isSidebarOpen ? 'show' : ''}`}
+        onClick={() => setIsSidebarOpen(false)}
+      />
+
       {/* SIDEBAR NAVIGATION */}
-      <aside className="glass-panel" style={{
+      <aside className={`glass-panel cms-sidebar ${isSidebarOpen ? 'open' : ''}`} style={{
         width: '280px',
         margin: '16px',
         padding: '24px',
@@ -654,27 +682,48 @@ export default function App() {
       }}>
         <div>
           {/* Header Title */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '40px', paddingBottom: '16px', borderBottom: '1px solid rgba(212, 175, 47, 0.15)' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              background: 'rgba(124, 26, 70, 0.2)',
-              border: '1px solid rgba(212, 175, 47, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Shield style={{ width: '20px', height: '20px', color: '#d4af2f' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', paddingBottom: '16px', borderBottom: '1px solid rgba(212, 175, 47, 0.15)' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                background: 'rgba(124, 26, 70, 0.2)',
+                border: '1px solid rgba(212, 175, 47, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Shield style={{ width: '20px', height: '20px', color: '#d4af2f' }} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '13px', letterSpacing: '0.05em', color: '#ffffff', fontWeight: 'bold' }}>
+                  ST. GEORGE
+                </h2>
+                <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.25em', color: '#d4af2f', display: 'block' }}>
+                  CMS & ADMIN
+                </span>
+              </div>
             </div>
-            <div>
-              <h2 style={{ fontSize: '13px', letterSpacing: '0.05em', color: '#ffffff', fontWeight: 'bold' }}>
-                ST. GEORGE
-              </h2>
-              <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.25em', color: '#d4af2f', display: 'block' }}>
-                CMS & ADMIN
-              </span>
-            </div>
+            
+            {isTablet && (
+              <button 
+                onClick={() => setIsSidebarOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#a6989b',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px'
+                }}
+                aria-label="Close menu"
+              >
+                <X style={{ width: '20px', height: '20px' }} />
+              </button>
+            )}
           </div>
 
           {/* Navigation Links */}
@@ -815,44 +864,111 @@ export default function App() {
         </div>
       </aside>
 
-      {/* MAIN WORKSPACE CONTENT */}
-      <main style={{ flexGrow: 1, padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px', overflowY: 'auto', maxHeight: '100vh', boxSizing: 'border-box' }}>
+      {/* MAIN WORKSPACE CONTENT WRAPPER */}
+      <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         
-        {/* Header toolbar */}
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ fontSize: '24px', letterSpacing: '0.05em', color: '#ffffff', fontWeight: 'bold' }}>
-              {activeTab === 'dashboard' && "Vicar's Administrative Desk"}
-              {activeTab === 'families' && "Parishioner Family Roster"}
-              {activeTab === 'offerings' && "Holy Intentions Ledger"}
-              {activeTab === 'contacts' && "Pastoral Counseling & Inquiries"}
-              {activeTab === 'users' && "Administrative Team Registry"}
-            </h1>
-            <p style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#d4af2f', marginTop: '4px' }}>
-              St. George Malankara Catholic Church, Edakkara
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            {activeTab === 'families' && (
-              <button onClick={printRoster} className="cms-btn cms-btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Printer style={{ width: '13px', height: '13px' }} />
-                Print Roster
+        {/* MOBILE TOP BAR HEADER */}
+        {isTablet && (
+          <div style={{
+            height: '64px',
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 20px',
+            background: 'rgba(12, 6, 8, 0.8)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderBottom: '1px solid rgba(212, 175, 47, 0.15)',
+            boxSizing: 'border-box',
+            position: 'sticky',
+            top: 0,
+            zIndex: 999
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#d4af2f',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px'
+                }}
+                aria-label="Open navigation menu"
+              >
+                <Menu style={{ width: '24px', height: '24px' }} />
               </button>
-            )}
-            <div style={{ fontSize: '11px', color: '#a6989b', textTransform: 'uppercase', letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <Calendar style={{ width: '12px', height: '12px', color: '#d4af2f' }} />
-              <span>Local Time: 11:25 AM</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Shield style={{ width: '16px', height: '16px', color: '#d4af2f' }} />
+                <span style={{ fontSize: '12px', letterSpacing: '0.05em', color: '#ffffff', fontWeight: 'bold' }}>
+                  ST. GEORGE CMS
+                </span>
+              </div>
             </div>
+            <span style={{
+              fontSize: '9px',
+              padding: '2px 8px',
+              borderRadius: '999px',
+              fontWeight: 'bold',
+              background: backendStatus === 'Online' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+              color: backendStatus === 'Online' ? '#4ade80' : '#f87171',
+              border: backendStatus === 'Online' ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)'
+            }}>
+              {backendStatus}
+            </span>
           </div>
-        </header>
+        )}
+
+        <main style={{ 
+          flexGrow: 1, 
+          padding: isMobile ? '16px' : '32px', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: isMobile ? '20px' : '32px', 
+          overflowY: 'auto', 
+          maxHeight: isTablet ? 'calc(100vh - 64px)' : '100vh', 
+          boxSizing: 'border-box' 
+        }}>
+          
+          {/* Header toolbar */}
+          <header className="cms-header">
+            <div>
+              <h1 style={{ fontSize: isMobile ? '18px' : '24px', letterSpacing: '0.05em', color: '#ffffff', fontWeight: 'bold' }}>
+                {activeTab === 'dashboard' && "Vicar's Administrative Desk"}
+                {activeTab === 'families' && "Parishioner Family Roster"}
+                {activeTab === 'offerings' && "Holy Intentions Ledger"}
+                {activeTab === 'contacts' && "Pastoral Counseling & Inquiries"}
+                {activeTab === 'users' && "Administrative Team Registry"}
+              </h1>
+              <p style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#d4af2f', marginTop: '4px' }}>
+                St. George Malankara Catholic Church, Edakkara
+              </p>
+            </div>
+
+            <div className="cms-header-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {activeTab === 'families' && (
+                <button onClick={printRoster} className="cms-btn cms-btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Printer style={{ width: '13px', height: '13px' }} />
+                  Print Roster
+                </button>
+              )}
+              <div style={{ fontSize: '11px', color: '#a6989b', textTransform: 'uppercase', letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <Calendar style={{ width: '12px', height: '12px', color: '#d4af2f' }} />
+                <span>Local Time: 11:25 AM</span>
+              </div>
+            </div>
+          </header>
 
         {/* 1. DASHBOARD TAB VIEW */}
         {activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
             
             {/* KPI STAT CARDS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+            <div className="stat-grid">
               {[
                 { title: 'Registered Families', value: families.length, sub: `${totalParishioners} active members`, icon: Users, color: 'gold' },
                 { title: 'Holy Offerings Tally', value: `₹${totalOfferings.toLocaleString()}`, sub: `${offeringCauseCount('housing')} housing brick funds`, icon: Heart, color: 'maroon' },
@@ -891,7 +1007,7 @@ export default function App() {
             </div>
 
             {/* QUICK ACTIONS & FEED VIEW */}
-            <div style={{ display: 'grid', gridTemplateColumns: '7fr 5fr', gap: '24px' }}>
+            <div className="dashboard-two-col">
               
               {/* Recent Family registrations */}
               <div className="glass-panel" style={{ padding: '24px' }}>
@@ -903,8 +1019,10 @@ export default function App() {
                   {families.slice(0, 3).map((fam, idx) => (
                     <div key={idx} style={{
                       display: 'flex',
+                      flexDirection: isMobile ? 'column' : 'row',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
+                      alignItems: isMobile ? 'flex-start' : 'center',
+                      gap: '12px',
                       padding: '16px',
                       borderRadius: '12px',
                       background: 'rgba(0, 0, 0, 0.2)',
@@ -916,7 +1034,13 @@ export default function App() {
                           Head: {fam.headName} • {fam.familyWard}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '10px', 
+                        alignItems: 'center', 
+                        width: isMobile ? '100%' : 'auto', 
+                        justifyContent: isMobile ? 'space-between' : 'flex-start' 
+                      }}>
                         <span className={`badge ${fam.status === 'Approved' ? 'badge-approved' : 'badge-pending'}`}>
                           {fam.status}
                         </span>
@@ -974,8 +1098,15 @@ export default function App() {
           <div className="glass-panel" style={{ padding: '24px' }}>
             
             {/* Search/Filter Toolbar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '16px' }}>
-              <div style={{ position: 'relative', width: '350px' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              justifyContent: 'space-between', 
+              alignItems: isMobile ? 'stretch' : 'center', 
+              marginBottom: '24px', 
+              gap: '16px' 
+            }}>
+              <div style={{ position: 'relative', width: isMobile ? '100%' : '350px' }}>
                 <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#a6989b' }} />
                 <input 
                   type="text" 
@@ -986,208 +1117,445 @@ export default function App() {
                   style={{ width: '100%', paddingLeft: '36px', boxSizing: 'border-box' }}
                 />
               </div>
-              <div style={{ fontSize: '12px', color: '#a6989b' }}>
+              <div style={{ fontSize: '12px', color: '#a6989b', textAlign: isMobile ? 'left' : 'right' }}>
                 Showing {filteredFamilies().length} of {families.length} families
               </div>
             </div>
 
-            {/* Families table */}
-            <table className="cms-table">
-              <thead>
-                <tr>
-                  <th>Family Name</th>
-                  <th>Head of Family</th>
-                  <th>Parish Ward</th>
-                  <th>Contact Phone</th>
-                  <th>Members Count</th>
-                  <th>Registration Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            {isMobile ? (
+              /* Mobile Card-Based Roster View */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {filteredFamilies().map((fam) => (
-                  <tr key={fam.id}>
-                    <td>
-                      <div style={{ fontWeight: 'bold', color: '#ffffff' }}>{fam.familyName}</div>
-                      <span style={{ fontSize: '10px', color: '#a6989b', display: 'block', marginTop: '2px' }}>ID: {fam.id}</span>
-                    </td>
-                    <td>{fam.headName}</td>
-                    <td>{fam.familyWard}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Phone style={{ width: '12px', height: '12px', color: '#d4af2f' }} />
-                        <span>{fam.phone}</span>
+                  <div key={fam.id} className="glass-panel" style={{ 
+                    padding: '20px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '12px',
+                    background: 'rgba(26, 15, 17, 0.45)',
+                    border: '1px solid rgba(212, 175, 47, 0.12)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h4 style={{ fontSize: '15px', color: '#ffffff', fontWeight: 'bold' }}>{fam.familyName}</h4>
+                        <span style={{ fontSize: '10px', color: '#a6989b', display: 'block', marginTop: '2px' }}>ID: {fam.id}</span>
                       </div>
-                    </td>
-                    <td>
-                      <span style={{ padding: '3px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', fontWeight: 'bold' }}>
-                        {fam.members?.length || 0} Members
-                      </span>
-                    </td>
-                    <td>
                       <span className={`badge ${fam.status === 'Approved' ? 'badge-approved' : 'badge-pending'}`}>
                         {fam.status}
                       </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                          onClick={() => setSelectedFamily(fam)} 
-                          className="cms-btn cms-btn-outline" 
-                          style={{ padding: '6px 12px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <Eye style={{ width: '12px', height: '12px' }} />
-                          View
-                        </button>
-                        <button 
-                          onClick={() => handleUpdateFamilyStatus(fam.id, fam.status)} 
-                          className="cms-btn cms-btn-primary" 
-                          style={{ padding: '6px 12px', fontSize: '10px' }}
-                        >
-                          {fam.status === 'Approved' ? 'Suspend' : 'Approve'}
-                        </button>
-                        <button 
-                          onClick={() => triggerDeleteConfirm(fam.id, 'family', fam.familyName)} 
-                          className="cms-btn cms-btn-primary" 
-                          style={{ padding: '6px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          title="Delete family"
-                        >
-                          <Trash2 style={{ width: '12px', height: '12px' }} />
-                        </button>
+                    </div>
+                    
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '1fr 1fr', 
+                      gap: '10px 16px', 
+                      fontSize: '12px', 
+                      borderTop: '1px solid rgba(255,255,255,0.05)', 
+                      borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                      padding: '10px 0' 
+                    }}>
+                      <div>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Head of Family</span>
+                        <span style={{ fontWeight: '500', color: '#e5e5e5' }}>{fam.headName}</span>
                       </div>
-                    </td>
-                  </tr>
+                      <div>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Parish Ward</span>
+                        <span style={{ fontWeight: '500', color: '#e5e5e5' }}>{fam.familyWard}</span>
+                      </div>
+                      <div>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Contact Phone</span>
+                        <span style={{ fontWeight: '500', color: '#e5e5e5', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Phone style={{ width: '10px', height: '10px', color: '#d4af2f' }} />
+                          {fam.phone}
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Members Count</span>
+                        <span style={{ fontWeight: '500', color: '#e5e5e5' }}>{fam.members?.length || 0} Members</span>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '8px', width: '100%', marginTop: '4px' }}>
+                      <button 
+                        onClick={() => setSelectedFamily(fam)} 
+                        className="cms-btn cms-btn-outline" 
+                        style={{ flex: 1, padding: '8px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                      >
+                        <Eye style={{ width: '12px', height: '12px' }} />
+                        View
+                      </button>
+                      <button 
+                        onClick={() => handleUpdateFamilyStatus(fam.id, fam.status)} 
+                        className="cms-btn cms-btn-primary" 
+                        style={{ flex: 1, padding: '8px', fontSize: '10px' }}
+                      >
+                        {fam.status === 'Approved' ? 'Suspend' : 'Approve'}
+                      </button>
+                      <button 
+                        onClick={() => triggerDeleteConfirm(fam.id, 'family', fam.familyName)} 
+                        className="cms-btn cms-btn-primary" 
+                        style={{ padding: '8px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="Delete family"
+                      >
+                        <Trash2 style={{ width: '12px', height: '12px' }} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              /* Desktop Table View */
+              <table className="cms-table">
+                <thead>
+                  <tr>
+                    <th>Family Name</th>
+                    <th>Head of Family</th>
+                    <th>Parish Ward</th>
+                    <th>Contact Phone</th>
+                    <th>Members Count</th>
+                    <th>Registration Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFamilies().map((fam) => (
+                    <tr key={fam.id}>
+                      <td>
+                        <div style={{ fontWeight: 'bold', color: '#ffffff' }}>{fam.familyName}</div>
+                        <span style={{ fontSize: '10px', color: '#a6989b', display: 'block', marginTop: '2px' }}>ID: {fam.id}</span>
+                      </td>
+                      <td>{fam.headName}</td>
+                      <td>{fam.familyWard}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Phone style={{ width: '12px', height: '12px', color: '#d4af2f' }} />
+                          <span>{fam.phone}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ padding: '3px 8px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', fontWeight: 'bold' }}>
+                          {fam.members?.length || 0} Members
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${fam.status === 'Approved' ? 'badge-approved' : 'badge-pending'}`}>
+                          {fam.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => setSelectedFamily(fam)} 
+                            className="cms-btn cms-btn-outline" 
+                            style={{ padding: '6px 12px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Eye style={{ width: '12px', height: '12px' }} />
+                            View
+                          </button>
+                          <button 
+                            onClick={() => handleUpdateFamilyStatus(fam.id, fam.status)} 
+                            className="cms-btn cms-btn-primary" 
+                            style={{ padding: '6px 12px', fontSize: '10px' }}
+                          >
+                            {fam.status === 'Approved' ? 'Suspend' : 'Approve'}
+                          </button>
+                          <button 
+                            onClick={() => triggerDeleteConfirm(fam.id, 'family', fam.familyName)} 
+                            className="cms-btn cms-btn-primary" 
+                            style={{ padding: '6px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="Delete family"
+                          >
+                            <Trash2 style={{ width: '12px', height: '12px' }} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
         {/* 3. HOLY OFFERINGS TAB VIEW */}
         {activeTab === 'offerings' && (
           <div className="glass-panel" style={{ padding: '24px' }}>
-            <table className="cms-table">
-              <thead>
-                <tr>
-                  <th>Offering Date</th>
-                  <th>Donor Name</th>
-                  <th>Offering Cause</th>
-                  <th>Offering Amount</th>
-                  <th>Special Intentions / Notes</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
+            {isMobile ? (
+              /* Mobile Card-Based Holy Offerings View */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {offerings.map((off) => (
-                  <tr key={off.id}>
-                    <td>{new Date(off.submittedAt).toLocaleDateString()}</td>
-                    <td>
-                      <div style={{ fontWeight: 'bold', color: '#ffffff' }}>{off.fullName}</div>
-                      <span style={{ fontSize: '10px', color: '#a6989b', display: 'block', marginTop: '2px' }}>Phone: {off.phone}</span>
-                    </td>
-                    <td style={{ textTransform: 'capitalize', color: '#d4af2f', fontWeight: '500' }}>
-                      {off.cause === 'housing' && 'Snehasparsham Brick Fund'}
-                      {off.cause === 'school' && 'Catechism School support'}
-                      {off.cause === 'mass' && 'Liturgy Intention Mass'}
-                      {off.cause === 'general' && 'General Sustainance'}
-                    </td>
-                    <td style={{ fontSize: '15px', fontWeight: 'bold', color: '#4ade80' }}>
-                      ₹{off.amount.toLocaleString()}
-                    </td>
-                    <td style={{ maxWidth: '280px', fontSize: '12px', fontStyle: 'italic', color: '#a6989b' }}>
-                      {off.notes || 'None'}
-                    </td>
-                    <td>
+                  <div key={off.id} className="glass-panel" style={{ 
+                    padding: '20px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '12px',
+                    background: 'rgba(26, 15, 17, 0.45)',
+                    border: '1px solid rgba(212, 175, 47, 0.12)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h4 style={{ fontSize: '15px', color: '#ffffff', fontWeight: 'bold' }}>{off.fullName}</h4>
+                        <span style={{ fontSize: '10px', color: '#a6989b', display: 'block', marginTop: '2px' }}>Date: {new Date(off.submittedAt).toLocaleDateString()}</span>
+                      </div>
                       <span className={`badge ${off.status === 'Acknowledged' ? 'badge-approved' : 'badge-pending'}`}>
                         {off.status}
                       </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                          onClick={() => handleUpdateOfferingStatus(off.id, off.status)}
-                          className="cms-btn cms-btn-outline" 
-                          style={{ padding: '6px 12px', fontSize: '10px' }}
-                        >
-                          {off.status === 'Acknowledged' ? 'Reset Status' : 'Acknowledge'}
-                        </button>
-                        <button 
-                          onClick={() => triggerDeleteConfirm(off.id, 'offering', off.fullName)} 
-                          className="cms-btn cms-btn-primary" 
-                          style={{ padding: '6px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          title="Delete offering"
-                        >
-                          <Trash2 style={{ width: '12px', height: '12px' }} />
-                        </button>
+                    </div>
+
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '1fr 1fr', 
+                      gap: '10px 16px', 
+                      fontSize: '12px', 
+                      borderTop: '1px solid rgba(255,255,255,0.05)', 
+                      borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                      padding: '10px 0' 
+                    }}>
+                      <div>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Offering Cause</span>
+                        <span style={{ fontWeight: '500', color: '#d4af2f' }}>
+                          {off.cause === 'housing' && 'Snehasparsham Brick Fund'}
+                          {off.cause === 'school' && 'Catechism School support'}
+                          {off.cause === 'mass' && 'Liturgy Intention Mass'}
+                          {off.cause === 'general' && 'General Sustainance'}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
+                      <div>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Offering Amount</span>
+                        <span style={{ fontWeight: 'bold', color: '#4ade80', fontSize: '14px' }}>₹{off.amount.toLocaleString()}</span>
+                      </div>
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Special Intentions</span>
+                        <span style={{ fontStyle: 'italic', color: '#e5e5e5' }}>"{off.notes || 'None'}"</span>
+                      </div>
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Donor Phone</span>
+                        <span style={{ fontWeight: '500', color: '#e5e5e5', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Phone style={{ width: '10px', height: '10px', color: '#d4af2f' }} />
+                          {off.phone}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', width: '100%', marginTop: '4px' }}>
+                      <button 
+                        onClick={() => handleUpdateOfferingStatus(off.id, off.status)}
+                        className="cms-btn cms-btn-outline" 
+                        style={{ flex: 1, padding: '8px', fontSize: '10px' }}
+                      >
+                        {off.status === 'Acknowledged' ? 'Reset Status' : 'Acknowledge'}
+                      </button>
+                      <button 
+                        onClick={() => triggerDeleteConfirm(off.id, 'offering', off.fullName)} 
+                        className="cms-btn cms-btn-primary" 
+                        style={{ padding: '8px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="Delete offering"
+                      >
+                        <Trash2 style={{ width: '12px', height: '12px' }} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              /* Desktop Table View */
+              <table className="cms-table">
+                <thead>
+                  <tr>
+                    <th>Offering Date</th>
+                    <th>Donor Name</th>
+                    <th>Offering Cause</th>
+                    <th>Offering Amount</th>
+                    <th>Special Intentions / Notes</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {offerings.map((off) => (
+                    <tr key={off.id}>
+                      <td>{new Date(off.submittedAt).toLocaleDateString()}</td>
+                      <td>
+                        <div style={{ fontWeight: 'bold', color: '#ffffff' }}>{off.fullName}</div>
+                        <span style={{ fontSize: '10px', color: '#a6989b', display: 'block', marginTop: '2px' }}>Phone: {off.phone}</span>
+                      </td>
+                      <td style={{ textTransform: 'capitalize', color: '#d4af2f', fontWeight: '500' }}>
+                        {off.cause === 'housing' && 'Snehasparsham Brick Fund'}
+                        {off.cause === 'school' && 'Catechism School support'}
+                        {off.cause === 'mass' && 'Liturgy Intention Mass'}
+                        {off.cause === 'general' && 'General Sustainance'}
+                      </td>
+                      <td style={{ fontSize: '15px', fontWeight: 'bold', color: '#4ade80' }}>
+                        ₹{off.amount.toLocaleString()}
+                      </td>
+                      <td style={{ maxWidth: '280px', fontSize: '12px', fontStyle: 'italic', color: '#a6989b' }}>
+                        {off.notes || 'None'}
+                      </td>
+                      <td>
+                        <span className={`badge ${off.status === 'Acknowledged' ? 'badge-approved' : 'badge-pending'}`}>
+                          {off.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => handleUpdateOfferingStatus(off.id, off.status)}
+                            className="cms-btn cms-btn-outline" 
+                            style={{ padding: '6px 12px', fontSize: '10px' }}
+                          >
+                            {off.status === 'Acknowledged' ? 'Reset Status' : 'Acknowledge'}
+                          </button>
+                          <button 
+                            onClick={() => triggerDeleteConfirm(off.id, 'offering', off.fullName)} 
+                            className="cms-btn cms-btn-primary" 
+                            style={{ padding: '6px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="Delete offering"
+                          >
+                            <Trash2 style={{ width: '12px', height: '12px' }} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
         {/* 4. PRAYER REQUESTS & CONTACT TAB VIEW */}
         {activeTab === 'contacts' && (
           <div className="glass-panel" style={{ padding: '24px' }}>
-            <table className="cms-table">
-              <thead>
-                <tr>
-                  <th>Submission Date</th>
-                  <th>Parishioner Info</th>
-                  <th>Inquiry Category</th>
-                  <th>Request Details / Petitions</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
+            {isMobile ? (
+              /* Mobile Card-Based Counseling & Inquiries View */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {contacts.map((con) => (
-                  <tr key={con.id}>
-                    <td>{new Date(con.submittedAt).toLocaleDateString()}</td>
-                    <td>
-                      <div style={{ fontWeight: 'bold', color: '#ffffff' }}>{con.name}</div>
-                      <span style={{ fontSize: '10px', color: '#a6989b', display: 'block', marginTop: '2px' }}>Email: {con.email}</span>
-                    </td>
-                    <td style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: 'bold', color: '#d4af2f', letterSpacing: '0.05em' }}>
-                      {con.subject === 'vicar' && 'Priest Appointment'}
-                      {con.subject === 'sacrament' && 'Sacrament Reservation'}
-                      {con.subject === 'mass' && 'Mass Intention'}
-                      {con.subject === 'general' && 'General Query'}
-                    </td>
-                    <td style={{ maxWidth: '350px', fontSize: '12px', lineHeight: '1.6', color: '#e5e5e5' }}>
-                      "{con.message}"
-                    </td>
-                    <td>
+                  <div key={con.id} className="glass-panel" style={{ 
+                    padding: '20px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '12px',
+                    background: 'rgba(26, 15, 17, 0.45)',
+                    border: '1px solid rgba(212, 175, 47, 0.12)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h4 style={{ fontSize: '15px', color: '#ffffff', fontWeight: 'bold' }}>{con.name}</h4>
+                        <span style={{ fontSize: '10px', color: '#a6989b', display: 'block', marginTop: '2px' }}>Date: {new Date(con.submittedAt).toLocaleDateString()}</span>
+                      </div>
                       <span className={`badge ${con.status === 'Resolved' ? 'badge-approved' : 'badge-unread'}`}>
                         {con.status}
                       </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                          onClick={() => handleUpdateContactStatus(con.id, con.status)}
-                          className="cms-btn cms-btn-outline" 
-                          style={{ padding: '6px 12px', fontSize: '10px' }}
-                        >
-                          {con.status === 'Resolved' ? 'Mark Pending' : 'Mark Resolved'}
-                        </button>
-                        <button 
-                          onClick={() => triggerDeleteConfirm(con.id, 'contact', con.name)} 
-                          className="cms-btn cms-btn-primary" 
-                          style={{ padding: '6px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          title="Delete contact"
-                        >
-                          <Trash2 style={{ width: '12px', height: '12px' }} />
-                        </button>
+                    </div>
+
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '8px', 
+                      fontSize: '12px', 
+                      borderTop: '1px solid rgba(255,255,255,0.05)', 
+                      borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                      padding: '10px 0' 
+                    }}>
+                      <div>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inquiry Category</span>
+                        <span style={{ fontWeight: 'bold', color: '#d4af2f', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {con.subject === 'vicar' && 'Priest Appointment'}
+                          {con.subject === 'sacrament' && 'Sacrament Reservation'}
+                          {con.subject === 'mass' && 'Mass Intention'}
+                          {con.subject === 'general' && 'General Query'}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
+                      <div>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Request Details / Petitions</span>
+                        <p style={{ margin: '4px 0 0 0', lineHeight: '1.5', color: '#e5e5e5', fontStyle: 'italic' }}>
+                          "{con.message}"
+                        </p>
+                      </div>
+                      <div>
+                        <span style={{ color: '#a6989b', display: 'block', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Contact Email</span>
+                        <span style={{ fontWeight: '500', color: '#e5e5e5' }}>{con.email}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', width: '100%', marginTop: '4px' }}>
+                      <button 
+                        onClick={() => handleUpdateContactStatus(con.id, con.status)}
+                        className="cms-btn cms-btn-outline" 
+                        style={{ flex: 1, padding: '8px', fontSize: '10px' }}
+                      >
+                        {con.status === 'Resolved' ? 'Mark Pending' : 'Mark Resolved'}
+                      </button>
+                      <button 
+                        onClick={() => triggerDeleteConfirm(con.id, 'contact', con.name)} 
+                        className="cms-btn cms-btn-primary" 
+                        style={{ padding: '8px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="Delete contact"
+                      >
+                        <Trash2 style={{ width: '12px', height: '12px' }} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              /* Desktop Table View */
+              <table className="cms-table">
+                <thead>
+                  <tr>
+                    <th>Submission Date</th>
+                    <th>Parishioner Info</th>
+                    <th>Inquiry Category</th>
+                    <th>Request Details / Petitions</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contacts.map((con) => (
+                    <tr key={con.id}>
+                      <td>{new Date(con.submittedAt).toLocaleDateString()}</td>
+                      <td>
+                        <div style={{ fontWeight: 'bold', color: '#ffffff' }}>{con.name}</div>
+                        <span style={{ fontSize: '10px', color: '#a6989b', display: 'block', marginTop: '2px' }}>Email: {con.email}</span>
+                      </td>
+                      <td style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: 'bold', color: '#d4af2f', letterSpacing: '0.05em' }}>
+                        {con.subject === 'vicar' && 'Priest Appointment'}
+                        {con.subject === 'sacrament' && 'Sacrament Reservation'}
+                        {con.subject === 'mass' && 'Mass Intention'}
+                        {con.subject === 'general' && 'General Query'}
+                      </td>
+                      <td style={{ maxWidth: '350px', fontSize: '12px', lineHeight: '1.6', color: '#e5e5e5' }}>
+                        "{con.message}"
+                      </td>
+                      <td>
+                        <span className={`badge ${con.status === 'Resolved' ? 'badge-approved' : 'badge-unread'}`}>
+                          {con.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => handleUpdateContactStatus(con.id, con.status)}
+                            className="cms-btn cms-btn-outline" 
+                            style={{ padding: '6px 12px', fontSize: '10px' }}
+                          >
+                            {con.status === 'Resolved' ? 'Mark Pending' : 'Mark Resolved'}
+                          </button>
+                          <button 
+                            onClick={() => triggerDeleteConfirm(con.id, 'contact', con.name)} 
+                            className="cms-btn cms-btn-primary" 
+                            style={{ padding: '6px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="Delete contact"
+                          >
+                            <Trash2 style={{ width: '12px', height: '12px' }} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
@@ -1196,21 +1564,27 @@ export default function App() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
             {/* Header / Add User Toolbar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              justifyContent: 'space-between', 
+              alignItems: isMobile ? 'stretch' : 'center',
+              gap: '16px'
+            }}>
               <span style={{ fontSize: '14px', color: '#a6989b' }}>
                 Manage parish administration team accounts, roles, and action permissions.
               </span>
               <button 
                 onClick={() => { resetUserForm(); setShowUserModal(true); }}
                 className="cms-btn cms-btn-primary" 
-                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}
               >
                 + Add Admin User
               </button>
             </div>
 
             {/* Users Cards Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '280px' : '320px'}, 1fr))`, gap: '20px' }}>
               {users.map((user) => (
                 <div key={user.id} className="glass-panel" style={{
                   padding: '24px',
@@ -1308,6 +1682,7 @@ export default function App() {
         )}
 
       </main>
+    </div>
 
       {/* 5. GORGEOUS FAMILY MEMBERS DETAIL MODAL POPUP */}
       {selectedFamily && (
@@ -1326,9 +1701,12 @@ export default function App() {
         }}>
           <div className="glass-panel" style={{
             maxWidth: '600px',
-            width: '100%',
-            padding: '32px',
-            position: 'relative'
+            width: isMobile ? 'calc(100% - 32px)' : '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: isMobile ? '24px 16px' : '32px',
+            position: 'relative',
+            margin: '16px'
           }}>
             <button 
               onClick={() => setSelectedFamily(null)} 
@@ -1418,12 +1796,13 @@ export default function App() {
         }}>
           <div className="glass-panel" style={{
             maxWidth: '400px',
-            width: '100%',
+            width: isMobile ? 'calc(100% - 32px)' : '100%',
             padding: '32px',
             textAlign: 'center',
             boxSizing: 'border-box',
             border: '1px solid rgba(124, 26, 46, 0.4)',
-            boxShadow: '0 20px 50px rgba(124, 26, 46, 0.3)'
+            boxShadow: '0 20px 50px rgba(124, 26, 46, 0.3)',
+            margin: '16px'
           }}>
             <div style={{
               width: '56px',
@@ -1492,12 +1871,13 @@ export default function App() {
         }}>
           <div className="glass-panel" style={{
             maxWidth: '550px',
-            width: '100%',
-            padding: '32px',
+            width: isMobile ? 'calc(100% - 32px)' : '100%',
+            padding: isMobile ? '24px 16px' : '32px',
             position: 'relative',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            margin: '16px'
           }}>
             <button 
               onClick={() => { setShowUserModal(false); resetUserForm(); }} 
@@ -1525,7 +1905,7 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left', marginBottom: '28px' }}>
                 
                 {/* Grid Inputs */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                   
                   {/* Username Input */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1560,7 +1940,7 @@ export default function App() {
 
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                   
                   {/* Display Name Input */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1603,7 +1983,7 @@ export default function App() {
                   <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#d4af2f', fontWeight: 'bold' }}>
                     Administrative Role
                   </label>
-                  <div style={{ display: 'flex', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '10px' : '16px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
                       <input 
                         type="radio" 
@@ -1634,7 +2014,7 @@ export default function App() {
                   <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#d4af2f', fontWeight: 'bold' }}>
                     Assign Section Permissions
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px 20px' }}>
                     {[
                       { id: 'view_dashboard', label: 'View Dashboard Metrics' },
                       { id: 'view_families', label: 'View Family Registry' },
@@ -1709,12 +2089,13 @@ export default function App() {
         }}>
           <div className="glass-panel" style={{
             maxWidth: '420px',
-            width: '100%',
+            width: isMobile ? 'calc(100% - 32px)' : '100%',
             padding: '32px',
             textAlign: 'center',
             boxSizing: 'border-box',
             border: '1px solid rgba(239, 68, 68, 0.4)',
-            boxShadow: '0 20px 50px rgba(239, 68, 68, 0.15)'
+            boxShadow: '0 20px 50px rgba(239, 68, 68, 0.15)',
+            margin: '16px'
           }}>
             <div style={{
               width: '56px',
