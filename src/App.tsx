@@ -160,6 +160,8 @@ export default function App() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; type: 'family' | 'offering' | 'contact' | 'user'; name: string } | null>(null);
 
   // User form states
   const [showUserModal, setShowUserModal] = useState(false);
@@ -288,27 +290,60 @@ export default function App() {
     }
   };
 
-  const handleDeleteFamily = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this family record?')) return;
-    
+  const triggerDeleteConfirm = (id: string, type: 'family' | 'offering' | 'contact' | 'user', name: string) => {
+    if (type === 'user' && id === 'USR_SUPERADMIN') {
+      alert("Cannot delete primary Super Admin user.");
+      return;
+    }
+    setDeleteTarget({ id, type, name });
+    setShowDeleteConfirm(true);
+  };
+
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
+    const { id, type } = deleteTarget;
+
     if (backendStatus === 'Online') {
       try {
         const token = localStorage.getItem('cms_token');
         const headers: any = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
-        const res = await fetch(`${API_URL}/register-family/${id}`, {
+
+        let path = '';
+        if (type === 'family') path = `/register-family/${id}`;
+        else if (type === 'offering') path = `/donations/${id}`;
+        else if (type === 'contact') path = `/contact/${id}`;
+        else if (type === 'user') path = `/users/${id}`;
+
+        const res = await fetch(`${API_URL}${path}`, {
           method: 'DELETE',
           headers
         });
-        if (res.ok) fetchData();
+
+        if (res.ok) {
+          fetchData();
+        } else {
+          const data = await res.json();
+          alert(data.error || `Failed to delete ${type}.`);
+        }
       } catch (err) {
         console.error(err);
       }
     } else {
       // Offline local delete
-      setFamilies(prev => prev.filter(f => f.id !== id));
+      if (type === 'family') {
+        setFamilies(prev => prev.filter(f => f.id !== id));
+      } else if (type === 'offering') {
+        setOfferings(prev => prev.filter(o => o.id !== id));
+      } else if (type === 'contact') {
+        setContacts(prev => prev.filter(c => c.id !== id));
+      } else if (type === 'user') {
+        setUsers(prev => prev.filter(u => u.id !== id));
+      }
     }
+
+    setShowDeleteConfirm(false);
+    setDeleteTarget(null);
   };
 
   const handleUpdateOfferingStatus = async (id: string, currentStatus: string) => {
@@ -355,49 +390,6 @@ export default function App() {
     }
   };
 
-  const handleDeleteOffering = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this offering record?')) return;
-    
-    if (backendStatus === 'Online') {
-      try {
-        const token = localStorage.getItem('cms_token');
-        const headers: any = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        
-        const res = await fetch(`${API_URL}/donations/${id}`, {
-          method: 'DELETE',
-          headers
-        });
-        if (res.ok) fetchData();
-      } catch (err) {
-        console.error(err);
-      }
-    } else {
-      setOfferings(prev => prev.filter(o => o.id !== id));
-    }
-  };
-
-  const handleDeleteContact = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this contact message?')) return;
-    
-    if (backendStatus === 'Online') {
-      try {
-        const token = localStorage.getItem('cms_token');
-        const headers: any = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        
-        const res = await fetch(`${API_URL}/contact/${id}`, {
-          method: 'DELETE',
-          headers
-        });
-        if (res.ok) fetchData();
-      } catch (err) {
-        console.error(err);
-      }
-    } else {
-      setContacts(prev => prev.filter(c => c.id !== id));
-    }
-  };
 
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -464,36 +456,6 @@ export default function App() {
     }
   };
 
-  const handleDeleteUser = async (id: string) => {
-    if (id === 'USR_SUPERADMIN') {
-      alert("Cannot delete primary Super Admin user.");
-      return;
-    }
-    if (!window.confirm("Are you sure you want to delete this admin/committee user permanently?")) return;
-
-    if (backendStatus === 'Online') {
-      try {
-        const token = localStorage.getItem('cms_token');
-        const headers: any = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const res = await fetch(`${API_URL}/users/${id}`, {
-          method: 'DELETE',
-          headers
-        });
-        const data = await res.json();
-        if (data.success) {
-          fetchData();
-        } else {
-          alert(data.error || "Failed to delete user.");
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    } else {
-      setUsers(prev => prev.filter(u => u.id !== id));
-    }
-  };
 
   const resetUserForm = () => {
     setEditingUser(null);
@@ -1056,7 +1018,7 @@ export default function App() {
                           {fam.status === 'Approved' ? 'Suspend' : 'Approve'}
                         </button>
                         <button 
-                          onClick={() => handleDeleteFamily(fam.id)} 
+                          onClick={() => triggerDeleteConfirm(fam.id, 'family', fam.familyName)} 
                           className="cms-btn cms-btn-primary" 
                           style={{ padding: '6px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           title="Delete family"
@@ -1122,7 +1084,7 @@ export default function App() {
                           {off.status === 'Acknowledged' ? 'Reset Status' : 'Acknowledge'}
                         </button>
                         <button 
-                          onClick={() => handleDeleteOffering(off.id)} 
+                          onClick={() => triggerDeleteConfirm(off.id, 'offering', off.fullName)} 
                           className="cms-btn cms-btn-primary" 
                           style={{ padding: '6px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           title="Delete offering"
@@ -1184,7 +1146,7 @@ export default function App() {
                           {con.status === 'Resolved' ? 'Mark Pending' : 'Mark Resolved'}
                         </button>
                         <button 
-                          onClick={() => handleDeleteContact(con.id)} 
+                          onClick={() => triggerDeleteConfirm(con.id, 'contact', con.name)} 
                           className="cms-btn cms-btn-primary" 
                           style={{ padding: '6px 12px', fontSize: '10px', background: '#7c1a2e', border: '1px solid #f87171', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           title="Delete contact"
@@ -1287,7 +1249,7 @@ export default function App() {
                     </button>
                     {user.id !== 'USR_SUPERADMIN' && (
                       <button 
-                        onClick={() => handleDeleteUser(user.id)} 
+                        onClick={() => triggerDeleteConfirm(user.id, 'user', user.displayName)} 
                         className="cms-btn cms-btn-primary" 
                         style={{ 
                           padding: '8px 12px', 
@@ -1691,6 +1653,78 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 8. PREMIUM DELETE CONFIRMATION MODAL */}
+      {showDeleteConfirm && deleteTarget && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(0,0,0,0.85)',
+          backdropFilter: 'blur(10px)',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div className="glass-panel" style={{
+            maxWidth: '420px',
+            width: '100%',
+            padding: '32px',
+            textAlign: 'center',
+            boxSizing: 'border-box',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            boxShadow: '0 20px 50px rgba(239, 68, 68, 0.15)'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px auto'
+            }}>
+              <Trash2 style={{ width: '22px', height: '22px', color: '#f87171' }} />
+            </div>
+
+            <h3 style={{ fontSize: '18px', color: '#ffffff', letterSpacing: '0.05em', marginBottom: '10px' }}>
+              Confirm Permanent Delete
+            </h3>
+            <p style={{ fontSize: '13px', color: '#a6989b', lineHeight: '1.6', marginBottom: '24px' }}>
+              Are you sure you want to permanently delete <strong>{deleteTarget.name}</strong>? This action is irreversible and will remove the record completely from the parish database.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => { setShowDeleteConfirm(false); setDeleteTarget(null); }} 
+                className="cms-btn cms-btn-outline" 
+                style={{ flex: 1, padding: '10px', fontSize: '11px' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeDelete} 
+                className="cms-btn cms-btn-primary" 
+                style={{ 
+                  flex: 1, 
+                  padding: '10px', 
+                  fontSize: '11px',
+                  background: '#7c1a2e',
+                  border: '1px solid #7c1a2e',
+                  color: '#ffffff'
+                }}
+              >
+                Delete Record
+              </button>
+            </div>
           </div>
         </div>
       )}
