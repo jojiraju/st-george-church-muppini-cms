@@ -1,0 +1,200 @@
+/* Custom Elegant Stylesheet for St. George Parish CMS */
+:root {
+  --primary-gold: #d4af2f;
+  --primary-gold-light: #e5c053;
+  --primary-maroon: #7c1a2e;
+  --primary-maroon-dark: #440b15;
+  --bg-dark: #080405;
+  --bg-card: rgba(26, 15, 17, 0.6);
+  --border-glass: rgba(212, 175, 47, 0.15);
+  --text-muted: #a6989b;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-dark);
+  color: #ffffff;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cinzel', serif;
+  margin: 0;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 47, 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-gold);
+}
+
+/* Glassmorphism Panel styles */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.glass-panel:hover {
+  border-color: rgba(212, 175, 47, 0.35);
+  box-shadow: 0 15px 35px rgba(124, 26, 46, 0.15);
+}
+
+/* Neon Glow Accents */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(212, 175, 47, 0.15);
+}
+.glow-maroon {
+  box-shadow: 0 0 20px rgba(124, 26, 46, 0.2);
+}
+
+/* Table styling */
+.cms-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.cms-table th {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--primary-gold);
+  background: rgba(124, 26, 46, 0.15);
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.cms-table td {
+  padding: 16px;
+  font-size: 13px;
+  color: #e5e5e5;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s ease;
+}
+
+.cms-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Input Styles */
+.cms-input {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.cms-input:focus {
+  border-color: var(--primary-gold);
+  box-shadow: 0 0 10px rgba(212, 175, 47, 0.15);
+}
+
+/* Button styles */
+.cms-btn {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  border: 1px solid var(--primary-gold);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cms-btn-primary {
+  background: var(--primary-maroon);
+  color: var(--primary-gold);
+}
+
+.cms-btn-primary:hover {
+  background: rgba(124, 26, 46, 0.8);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(212, 175, 47, 0.2);
+}
+
+.cms-btn-outline {
+  background: transparent;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.cms-btn-outline:hover {
+  border-color: var(--primary-gold);
+  color: var(--primary-gold);
+}
+
+/* Badges */
+.badge {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+.badge-pending {
+  background: rgba(212, 175, 47, 0.15);
+  border: 1px solid rgba(212, 175, 47, 0.3);
+  color: var(--primary-gold);
+}
+
+.badge-approved {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.badge-unread {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.badge-resolved {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+/* Grid layout */
+.cms-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+}
+
+/* Premium autofill style overrides to keep fields dark/elegant */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px rgba(0, 0, 0, 0.65) inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
