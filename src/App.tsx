@@ -112,26 +112,72 @@ const MOCK_CONTACTS = [
   }
 ];
 
+const MOCK_USERS = [
+  {
+    id: "USR_SUPERADMIN",
+    username: "admin",
+    displayName: "Super Administrator",
+    role: "super_admin",
+    committee: "Parish Administration",
+    permissions: [
+      'view_dashboard',
+      'view_families',
+      'manage_families',
+      'view_offerings',
+      'manage_offerings',
+      'view_contacts',
+      'manage_contacts',
+      'manage_users'
+    ],
+    isActive: true,
+    createdAt: "2026-05-15T08:00:00.000Z"
+  },
+  {
+    id: "USR_1778999990901",
+    username: "trustee",
+    displayName: "Mr. Abraham Valel (Trustee)",
+    role: "committee_member",
+    committee: "Parish Committee",
+    permissions: ['view_dashboard', 'view_families', 'view_offerings', 'manage_offerings'],
+    isActive: true,
+    createdAt: "2026-05-16T09:00:00.000Z"
+  }
+];
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('cms_auth') === 'true');
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin@1976');
   const [loginError, setLoginError] = useState('');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'families' | 'offerings' | 'contacts'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'families' | 'offerings' | 'contacts' | 'users'>('dashboard');
   const [families, setFamilies] = useState<any[]>(MOCK_FAMILIES);
   const [offerings, setOfferings] = useState<any[]>(MOCK_OFFERINGS);
   const [contacts, setContacts] = useState<any[]>(MOCK_CONTACTS);
+  const [users, setUsers] = useState<any[]>(MOCK_USERS);
   const [loading, setLoading] = useState(false);
   const [backendStatus, setBackendStatus] = useState<'Online' | 'Offline' | 'Checking'>('Checking');
   const [selectedFamily, setSelectedFamily] = useState<any | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; type: string; name: string } | null>(null);
+
+  // User form states
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [formUsername, setFormUsername] = useState('');
+  const [formPassword, setFormPassword] = useState('');
+  const [formDisplayName, setFormDisplayName] = useState('');
+  const [formRole, setFormRole] = useState('committee_member');
+  const [formCommittee, setFormCommittee] = useState('General');
+  const [formPermissions, setFormPermissions] = useState<string[]>([
+    'view_dashboard',
+    'view_families',
+    'view_offerings',
+    'view_contacts'
+  ]);
 
   // API Backend URL
-  const API_URL = 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   const fetchData = async () => {
     setLoading(true);
@@ -156,6 +202,15 @@ export default function App() {
       if (famJSON.success) setFamilies(famJSON.data);
       if (offJSON.success) setOfferings(offJSON.data);
       if (conJSON.success) setContacts(conJSON.data);
+
+      // 4. Fetch Users
+      try {
+        const userRes = await fetch(`${API_URL}/users`, { headers });
+        const userJSON = await userRes.json();
+        if (userJSON.success) setUsers(userJSON.data);
+      } catch (err) {
+        console.warn("User management not authorized for this profile or offline");
+      }
       
       setBackendStatus('Online');
     } catch (err) {
@@ -165,6 +220,7 @@ export default function App() {
       setFamilies(MOCK_FAMILIES);
       setOfferings(MOCK_OFFERINGS);
       setContacts(MOCK_CONTACTS);
+      setUsers(MOCK_USERS);
     } finally {
       setLoading(false);
     }
@@ -343,6 +399,128 @@ export default function App() {
     }
   };
 
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formUsername || !formDisplayName || (!editingUser && !formPassword)) {
+      alert("Username, Display Name and Password are required.");
+      return;
+    }
+
+    const payload: any = {
+      username: formUsername,
+      displayName: formDisplayName,
+      role: formRole,
+      committee: formCommittee,
+      permissions: formPermissions
+    };
+    if (formPassword) payload.password = formPassword;
+
+    if (backendStatus === 'Online') {
+      try {
+        const token = localStorage.getItem('cms_token');
+        const headers: any = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        let res;
+        if (editingUser) {
+          res = await fetch(`${API_URL}/users/${editingUser.id}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(payload)
+          });
+        } else {
+          res = await fetch(`${API_URL}/users`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+          });
+        }
+
+        const data = await res.json();
+        if (data.success) {
+          fetchData();
+          setShowUserModal(false);
+          resetUserForm();
+        } else {
+          alert(data.error || "Failed to save user.");
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      if (editingUser) {
+        setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...payload } : u));
+      } else {
+        const newUser = {
+          id: `USR_${Date.now()}`,
+          ...payload,
+          isActive: true,
+          createdAt: new Date().toISOString()
+        };
+        setUsers(prev => [...prev, newUser]);
+      }
+      setShowUserModal(false);
+      resetUserForm();
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (id === 'USR_SUPERADMIN') {
+      alert("Cannot delete primary Super Admin user.");
+      return;
+    }
+    if (!window.confirm("Are you sure you want to delete this admin/committee user permanently?")) return;
+
+    if (backendStatus === 'Online') {
+      try {
+        const token = localStorage.getItem('cms_token');
+        const headers: any = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch(`${API_URL}/users/${id}`, {
+          method: 'DELETE',
+          headers
+        });
+        const data = await res.json();
+        if (data.success) {
+          fetchData();
+        } else {
+          alert(data.error || "Failed to delete user.");
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    } else {
+      setUsers(prev => prev.filter(u => u.id !== id));
+    }
+  };
+
+  const resetUserForm = () => {
+    setEditingUser(null);
+    setFormUsername('');
+    setFormPassword('');
+    setFormDisplayName('');
+    setFormRole('committee_member');
+    setFormCommittee('General');
+    setFormPermissions([
+      'view_dashboard',
+      'view_families',
+      'view_offerings',
+      'view_contacts'
+    ]);
+  };
+
+  const openEditUserModal = (user: any) => {
+    setEditingUser(user);
+    setFormUsername(user.username);
+    setFormPassword('');
+    setFormDisplayName(user.displayName);
+    setFormRole(user.role);
+    setFormCommittee(user.committee);
+    setFormPermissions(user.permissions || []);
+    setShowUserModal(true);
+  };
+
   const printRoster = () => {
     window.print();
   };
@@ -514,7 +692,8 @@ export default function App() {
               { id: 'dashboard', name: 'Dashboard', icon: Shield, badge: pendingRegistrations + pendingOfferings + pendingContacts },
               { id: 'families', name: 'Family Roster', icon: Users, badge: pendingRegistrations },
               { id: 'offerings', name: 'Holy Offerings', icon: Heart, badge: pendingOfferings },
-              { id: 'contacts', name: 'Prayer Requests', icon: Mail, badge: pendingContacts }
+              { id: 'contacts', name: 'Prayer Requests', icon: Mail, badge: pendingContacts },
+              { id: 'users', name: 'Admin Users', icon: Lock, badge: 0 }
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -656,6 +835,7 @@ export default function App() {
               {activeTab === 'families' && "Parishioner Family Roster"}
               {activeTab === 'offerings' && "Holy Intentions Ledger"}
               {activeTab === 'contacts' && "Pastoral Counseling & Inquiries"}
+              {activeTab === 'users' && "Administrative Team Registry"}
             </h1>
             <p style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#d4af2f', marginTop: '4px' }}>
               St. George Malankara Catholic Church, Edakkara
@@ -1020,6 +1200,116 @@ export default function App() {
           </div>
         )}
 
+        {/* 5. ADMIN USER MANAGEMENT TAB VIEW */}
+        {activeTab === 'users' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            
+            {/* Header / Add User Toolbar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '14px', color: '#a6989b' }}>
+                Manage parish administration team accounts, roles, and action permissions.
+              </span>
+              <button 
+                onClick={() => { resetUserForm(); setShowUserModal(true); }}
+                className="cms-btn cms-btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                + Add Admin User
+              </button>
+            </div>
+
+            {/* Users Cards Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+              {users.map((user) => (
+                <div key={user.id} className="glass-panel" style={{
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  border: user.role === 'super_admin' ? '1px solid rgba(212,175,47,0.3)' : '1px solid rgba(255,255,255,0.05)',
+                  boxShadow: user.role === 'super_admin' ? '0 8px 32px rgba(212,175,47,0.05)' : 'none'
+                }}>
+                  {/* Card Header */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div>
+                        <h4 style={{ fontSize: '16px', color: '#ffffff', fontWeight: 'bold' }}>{user.displayName}</h4>
+                        <span style={{ fontSize: '12px', color: '#a6989b', display: 'block', marginTop: '2px' }}>@{user.username}</span>
+                      </div>
+                      <span className={`badge ${user.role === 'super_admin' ? 'badge-approved' : 'badge-pending'}`} style={{ textTransform: 'uppercase', fontSize: '9px' }}>
+                        {user.role === 'super_admin' ? 'Super Admin' : 'Committee'}
+                      </span>
+                    </div>
+
+                    {/* Meta Row */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: '#e5e5e5', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px', marginBottom: '12px' }}>
+                      <div>
+                        <span style={{ color: '#a6989b', marginRight: '6px' }}>Group:</span> 
+                        <span style={{ fontWeight: '500' }}>{user.committee}</span>
+                      </div>
+                      <div>
+                        <span style={{ color: '#a6989b', marginRight: '6px' }}>Joined:</span> 
+                        <span>{new Date(user.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Permissions list */}
+                    <div>
+                      <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#d4af2f', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        Active Permissions ({user.permissions?.length || 0})
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {user.permissions && user.permissions.map((perm: string) => (
+                          <span key={perm} style={{
+                            fontSize: '9px',
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            color: '#e5e5e5',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(255, 255, 255, 0.08)'
+                          }}>
+                            {perm.replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions Row */}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+                    <button 
+                      onClick={() => openEditUserModal(user)} 
+                      className="cms-btn cms-btn-outline" 
+                      style={{ flex: 1, padding: '8px', fontSize: '11px' }}
+                    >
+                      Edit User
+                    </button>
+                    {user.id !== 'USR_SUPERADMIN' && (
+                      <button 
+                        onClick={() => handleDeleteUser(user.id)} 
+                        className="cms-btn cms-btn-primary" 
+                        style={{ 
+                          padding: '8px 12px', 
+                          fontSize: '11px', 
+                          background: '#7c1a2e', 
+                          border: '1px solid #f87171', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center' 
+                        }}
+                        title="Delete User permanently"
+                      >
+                        <Trash2 style={{ width: '14px', height: '14px' }} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* 5. GORGEOUS FAMILY MEMBERS DETAIL MODAL POPUP */}
@@ -1182,6 +1472,225 @@ export default function App() {
                 Logout
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. PREMIUM ADMIN USER CREATION & EDITING MODAL */}
+      {showUserModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(0,0,0,0.85)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          boxSizing: 'border-box'
+        }}>
+          <div className="glass-panel" style={{
+            maxWidth: '550px',
+            width: '100%',
+            padding: '32px',
+            position: 'relative',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxSizing: 'border-box'
+          }}>
+            <button 
+              onClick={() => { setShowUserModal(false); resetUserForm(); }} 
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#a6989b'
+              }}
+            >
+              <X style={{ width: '20px', height: '20px' }} />
+            </button>
+
+            <h2 style={{ fontSize: '20px', color: '#ffffff', letterSpacing: '0.05em', marginBottom: '8px' }}>
+              {editingUser ? "Edit Administrative User" : "Create New Parish Administrator"}
+            </h2>
+            <p style={{ fontSize: '12px', color: '#a6989b', marginBottom: '24px' }}>
+              Set credentials, administrative roles, and permission levels for committee leaders.
+            </p>
+
+            <form onSubmit={handleSaveUser}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left', marginBottom: '28px' }}>
+                
+                {/* Grid Inputs */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  
+                  {/* Username Input */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#d4af2f', fontWeight: 'bold' }}>
+                      Username
+                    </label>
+                    <input 
+                      type="text" 
+                      value={formUsername} 
+                      onChange={(e) => setFormUsername(e.target.value)}
+                      className="cms-input"
+                      placeholder="e.g. secretary"
+                      disabled={!!editingUser}
+                      style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  {/* Password Input */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#d4af2f', fontWeight: 'bold' }}>
+                      {editingUser ? "Change Password (Optional)" : "Password"}
+                    </label>
+                    <input 
+                      type="password" 
+                      value={formPassword} 
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      className="cms-input"
+                      placeholder={editingUser ? "Leave blank to keep current" : "Min 6 characters"}
+                      style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  
+                  {/* Display Name Input */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#d4af2f', fontWeight: 'bold' }}>
+                      Full Display Name
+                    </label>
+                    <input 
+                      type="text" 
+                      value={formDisplayName} 
+                      onChange={(e) => setFormDisplayName(e.target.value)}
+                      className="cms-input"
+                      placeholder="Mr. Josh Mayilil"
+                      style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  {/* Committee Group */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#d4af2f', fontWeight: 'bold' }}>
+                      Committee Association
+                    </label>
+                    <select
+                      value={formCommittee}
+                      onChange={(e) => setFormCommittee(e.target.value)}
+                      className="cms-input"
+                      style={{ width: '100%', boxSizing: 'border-box', background: '#12070a', color: '#ffffff' }}
+                    >
+                      <option value="Parish Administration">Parish Administration (Vicarage)</option>
+                      <option value="Parish Committee">Parish Committee</option>
+                      <option value="Youth Association">Youth Association (KCYM)</option>
+                      <option value="Mothers Association">Mothers Association (Mathrusangham)</option>
+                      <option value="Catechism Ministry">Catechism Ministry</option>
+                    </select>
+                  </div>
+
+                </div>
+
+                {/* Role selection */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#d4af2f', fontWeight: 'bold' }}>
+                    Administrative Role
+                  </label>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        name="userRole" 
+                        value="committee_member" 
+                        checked={formRole === 'committee_member'} 
+                        onChange={() => setFormRole('committee_member')}
+                        style={{ accentColor: '#d4af2f' }}
+                      />
+                      Committee Member
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        name="userRole" 
+                        value="super_admin" 
+                        checked={formRole === 'super_admin'} 
+                        onChange={() => setFormRole('super_admin')}
+                        style={{ accentColor: '#d4af2f' }}
+                      />
+                      Super Administrator (Vicar level)
+                    </label>
+                  </div>
+                </div>
+
+                {/* Permissions checkboxes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+                  <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#d4af2f', fontWeight: 'bold' }}>
+                    Assign Section Permissions
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
+                    {[
+                      { id: 'view_dashboard', label: 'View Dashboard Metrics' },
+                      { id: 'view_families', label: 'View Family Registry' },
+                      { id: 'manage_families', label: 'Approve/Modify Families' },
+                      { id: 'view_offerings', label: 'View Holy Mass Offerings' },
+                      { id: 'manage_offerings', label: 'Acknowledge Offerings' },
+                      { id: 'view_contacts', label: 'View Prayer Requests' },
+                      { id: 'manage_contacts', label: 'Resolve Prayer Petitions' },
+                      { id: 'manage_users', label: 'Manage Admin Users' }
+                    ].map(perm => {
+                      const isChecked = formPermissions.includes(perm.id);
+                      return (
+                        <label key={perm.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer', color: '#e5e5e5' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setFormPermissions(prev => prev.filter(p => p !== perm.id));
+                              } else {
+                                setFormPermissions(prev => [...prev, perm.id]);
+                              }
+                            }}
+                            style={{ accentColor: '#d4af2f' }}
+                          />
+                          {perm.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Form Buttons */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button 
+                  type="button"
+                  onClick={() => { setShowUserModal(false); resetUserForm(); }} 
+                  className="cms-btn cms-btn-outline" 
+                  style={{ flex: 1, padding: '10px', fontSize: '11px' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="cms-btn cms-btn-primary" 
+                  style={{ flex: 1, padding: '10px', fontSize: '11px' }}
+                >
+                  {editingUser ? "Save Changes" : "Create User Account"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
