@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import { 
   Shield, 
   Users, 
@@ -280,13 +281,20 @@ export default function App() {
           headers,
           body: JSON.stringify({ status: nextStatus })
         });
-        if (res.ok) fetchData();
+        if (res.ok) {
+          fetchData();
+          toast.success(`Family status updated to ${nextStatus}!`);
+        } else {
+          toast.error("Failed to update family status.");
+        }
       } catch (err) {
         console.error(err);
+        toast.error("Failed to connect to server.");
       }
     } else {
       // Offline local update
       setFamilies(prev => prev.map(f => f.id === id ? { ...f, status: nextStatus } : f));
+      toast.success(`[Offline] Family status updated to ${nextStatus}!`);
     }
   };
 
@@ -301,7 +309,7 @@ export default function App() {
 
   const executeDelete = async () => {
     if (!deleteTarget) return;
-    const { id, type } = deleteTarget;
+    const { id, type, name } = deleteTarget;
 
     if (backendStatus === 'Online') {
       try {
@@ -322,12 +330,14 @@ export default function App() {
 
         if (res.ok) {
           fetchData();
+          toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} "${name}" deleted permanently.`);
         } else {
           const data = await res.json();
-          alert(data.error || `Failed to delete ${type}.`);
+          toast.error(data.error || `Failed to delete ${type}.`);
         }
       } catch (err) {
         console.error(err);
+        toast.error("Failed to connect to server.");
       }
     } else {
       // Offline local delete
@@ -340,6 +350,7 @@ export default function App() {
       } else if (type === 'user') {
         setUsers(prev => prev.filter(u => u.id !== id));
       }
+      toast.success(`[Offline] Deleted ${type} "${name}" permanently.`);
     }
 
     setShowDeleteConfirm(false);
@@ -359,12 +370,19 @@ export default function App() {
           headers,
           body: JSON.stringify({ status: nextStatus })
         });
-        if (res.ok) fetchData();
+        if (res.ok) {
+          fetchData();
+          toast.success(`Offering status updated to ${nextStatus}!`);
+        } else {
+          toast.error("Failed to update offering status.");
+        }
       } catch (err) {
         console.error(err);
+        toast.error("Failed to connect to server.");
       }
     } else {
       setOfferings(prev => prev.map(o => o.id === id ? { ...o, status: nextStatus } : o));
+      toast.success(`[Offline] Offering status updated to ${nextStatus}!`);
     }
   };
 
@@ -381,12 +399,19 @@ export default function App() {
           headers,
           body: JSON.stringify({ status: nextStatus })
         });
-        if (res.ok) fetchData();
+        if (res.ok) {
+          fetchData();
+          toast.success(`Request status updated to ${nextStatus}!`);
+        } else {
+          toast.error("Failed to update status.");
+        }
       } catch (err) {
         console.error(err);
+        toast.error("Failed to connect to server.");
       }
     } else {
       setContacts(prev => prev.map(c => c.id === id ? { ...c, status: nextStatus } : c));
+      toast.success(`[Offline] Request status updated to ${nextStatus}!`);
     }
   };
 
@@ -394,7 +419,7 @@ export default function App() {
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formUsername || !formDisplayName || (!editingUser && !formPassword)) {
-      alert("Username, Display Name and Password are required.");
+      toast.error("Username, Display Name and Password are required.");
       return;
     }
 
@@ -433,15 +458,18 @@ export default function App() {
           fetchData();
           setShowUserModal(false);
           resetUserForm();
+          toast.success(editingUser ? "User updated successfully!" : "User account created successfully!");
         } else {
-          alert(data.error || "Failed to save user.");
+          toast.error(data.error || "Failed to save user.");
         }
       } catch (err) {
         console.error(err);
+        toast.error("Failed to connect to server.");
       }
     } else {
       if (editingUser) {
         setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...payload } : u));
+        toast.success("[Offline] User updated successfully!");
       } else {
         const newUser = {
           id: `USR_${Date.now()}`,
@@ -450,6 +478,7 @@ export default function App() {
           createdAt: new Date().toISOString()
         };
         setUsers(prev => [...prev, newUser]);
+        toast.success("[Offline] User account created successfully!");
       }
       setShowUserModal(false);
       resetUserForm();
@@ -1734,6 +1763,36 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* PREMIUM CUSTOM COLOR-MATCHED TOASTER NOTIFICATIONS */}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: 'rgba(20, 20, 20, 0.95)',
+            color: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            backdropFilter: 'blur(8px)',
+            fontSize: '13px',
+            fontFamily: 'inherit',
+            borderRadius: '8px',
+            padding: '12px 18px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+          },
+          success: {
+            iconTheme: {
+              primary: '#d4af2f',
+              secondary: '#141414'
+            }
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#141414'
+            }
+          }
+        }}
+      />
 
     </div>
   );
