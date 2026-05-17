@@ -1240,13 +1240,19 @@ export default function App() {
 
                   {/* Actions Row */}
                   <div style={{ display: 'flex', gap: '10px', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
-                    <button 
-                      onClick={() => openEditUserModal(user)} 
-                      className="cms-btn cms-btn-outline" 
-                      style={{ flex: 1, padding: '8px', fontSize: '11px' }}
-                    >
-                      Edit User
-                    </button>
+                    {user.id !== 'USR_SUPERADMIN' ? (
+                      <button 
+                        onClick={() => openEditUserModal(user)} 
+                        className="cms-btn cms-btn-outline" 
+                        style={{ flex: 1, padding: '8px', fontSize: '11px' }}
+                      >
+                        Edit User
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '11px', color: '#a6989b', fontStyle: 'italic', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        System Account (Unmodifiable)
+                      </span>
+                    )}
                     {user.id !== 'USR_SUPERADMIN' && (
                       <button 
                         onClick={() => triggerDeleteConfirm(user.id, 'user', user.displayName)} 
